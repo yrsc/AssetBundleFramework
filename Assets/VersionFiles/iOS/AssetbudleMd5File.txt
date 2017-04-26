@@ -1,0 +1,4 @@
+﻿AssetBundle,13aaaf4037cd87bfbb712534744e2279
+prefabs/barrel_01.prefab,5e905adb886558b9257d0f046c836f23
+prefabs/book_01.prefab,6cbdf74791a0556f468484a4cf87f36a
+textures/ewar_009.png,45913c4b5866297b08c1fc781970f3f5

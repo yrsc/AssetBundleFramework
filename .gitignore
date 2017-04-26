@@ -1,0 +1,12 @@
+/Library/*
+/obj/*
+/Temp/*
+*.userprefs
+/*.csproj
+/*.sln
+/Assets/Release/*
+/Assets/StreamingAssets/*
+/NewAssetbundles/*
+.vscode
+.DS_Store
+/Assets/StreamingAssets.meta
