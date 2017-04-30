@@ -6,7 +6,7 @@
 /*.sln
 /Assets/Release/*
 /Assets/StreamingAssets/*
-/NewAssetbundles/*
+/UpdateFiles/*
 .vscode
 .DS_Store
 /Assets/StreamingAssets.meta
