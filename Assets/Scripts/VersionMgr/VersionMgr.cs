@@ -23,32 +23,40 @@ public class VersionMgr
 	}
 	private VersionResultFromServer _serverResult = null;
 
+	public static VersionMgr instance = null;
+
 	public VersionMgr()
 	{
-		GetClientVersion();
+		instance = this;
 	}
 
-	private UpdateFile _lastUpdateFile = null;
+	private VersionFileModel _lastVersionFile = null;
+
 	void GetClientVersion()
 	{
 		_appVersion = VersionConfig.app_version;
-
-		string updateFile = string.Format("{0}/{1}",DownloadConfig.downLoadPath,VersionConfig.updateFileName);
+		if(_lastVersionFile != null)
+		{
+			_resVersion = _lastVersionFile.resVersion;
+			return;
+		}
+		string verionFilePath = string.Format("{0}/{1}",DownloadConfig.downLoadPath,VersionConfig.VersionFileName);
 		//获得上一次客户端更新到的版本
-		string content = SimpleLoader.LoadText(updateFile);
+		string content = SimpleLoader.LoadText(verionFilePath);
 		if(string.IsNullOrEmpty(content))
 		{
 			_resVersion = VersionConfig.res_version;
 		}
 		else
 		{
-			VersionHelper.ParseUpdateFile(content,ref _lastUpdateFile);
-			_resVersion = _lastUpdateFile.resVersion;
+			VersionHelper.ParseVersionFile(content,ref _lastVersionFile);
+			_resVersion = _lastVersionFile.resVersion;
 		}
 	}
 
 	public void StartCheckVersion()
 	{
+		GetClientVersion();
 		_serverResult = CheckVersionFromServer(_appVersion,_resVersion);
 		if(_serverResult.versionType == VersionType.App)
 		{
@@ -57,7 +65,7 @@ public class VersionMgr
 		}
 		else if(_serverResult.versionType == VersionType.Res)
 		{
-			DownloadUpdateFile();
+			DownloadVersionFile();
 		}
 		else if(_serverResult.versionType == VersionType.None)
 		{
@@ -68,9 +76,11 @@ public class VersionMgr
 	VersionResultFromServer CheckVersionFromServer(string appVersion,string resVersion)
 	{
 		VersionResultFromServer result = new VersionResultFromServer();
-		result.downloadBaseUrl = "";
+		//result.downloadBaseUrl = "file:///Users/yr/GamePatch";
+		result.downloadBaseUrl = "http://192.168.10.180:9001";
+		//测试的改为VersionType.Res,代表资源更新
 		result.versionType = VersionType.None;
-		result.serverResVersion = "";
+		result.serverResVersion = "170423.2";
 		//服务器传回来的下载地址假设是xx.xx.xxx.xx,我们需要根据平台重新生成一下，最终为xx.xx.xxx.xx/iOS 或者xx.xx.xxx.xx/Android
 		result.downloadBaseUrl  = ConnectDownloadUrlWithPlatform(result.downloadBaseUrl);
 		return result;
@@ -79,64 +89,73 @@ public class VersionMgr
 	string ConnectDownloadUrlWithPlatform(string url)
 	{
 		#if UNITY_IOS
-		return url + "/iOS";
+		return string.Format("{0}/{1}/{2}",url,"iOS",_appVersion);
 		#elif UNITY_ANDROID
-		return url + "/Android";
+		return string.Format("{0}/{1}/{2}",url,"Android",_appVersion);
 		#endif
 	}
 
-	void DownloadUpdateFile()
+	void DownloadVersionFile(float delay = -1)
 	{
 		//首先下载updateFile文件，然后从updateFile文件里面下载需要更新的资源
-		string updateFileDownUrl = string.Format("{0}/{1}/{2}",_serverResult.downloadBaseUrl,_serverResult.serverResVersion,VersionConfig.updateFileName);
-		DownloadMgr.instance.Download<string>(updateFileDownUrl,OnUpdateFileDownload);
+		Debug.Log("Begin download version files");
+		string versionFileDownUrl = string.Format("{0}/{1}/{2}",_serverResult.downloadBaseUrl,_serverResult.serverResVersion,VersionConfig.VersionFileName);
+		DownloadMgr.instance.Download(versionFileDownUrl,OnVersionFileDownload,delay);
 	}
 
-	private UpdateFile _downloadUpdateFile = null;
-	private List<string> _needUpdateFileList = new List<string>();
+	private VersionFileModel _versionFileOnServer = null;
 	private int _downloadIndex = 0;
-	void OnUpdateFileDownload(string txt)
+	void OnVersionFileDownload(WWW www)
 	{		
-		VersionHelper.ParseUpdateFile(txt,ref _downloadUpdateFile);
-		GenerateNeedUpdateFile();
+		if(www == null)
+		{
+			//如果下载失败，等待1s后重新下载，可以是个逐渐增长的等待时间
+			DownloadVersionFile(1.0f);
+			return;
+		}
+		string content = www.text;
+		_downloadIndex = 0;
+		VersionHelper.ParseVersionFile(content,ref _versionFileOnServer);
+		GenerateUpdateFilesList();
 		DownloadUpdateFiles(_downloadIndex);
 	}
 
-	void GenerateNeedUpdateFile()
+	private List<string> _needUpdateFileList = new List<string>();
+	void GenerateUpdateFilesList()
 	{
 		_needUpdateFileList.Clear();
-		if(_downloadUpdateFile == null)
+		if(_versionFileOnServer == null)
 		{
 			return;
 		}
-		Dictionary<string,UpdateFileInfo> _allFileDic = new Dictionary<string, UpdateFileInfo>();
-		if(_lastUpdateFile == null)
+		Dictionary<string,VersionFileInfo> _allFileDic = new Dictionary<string, VersionFileInfo>();
+		if(_lastVersionFile == null)
 		{
-			_allFileDic = _downloadUpdateFile.files;
+			_allFileDic = _versionFileOnServer.files;
 		}
 		else
 		{
 			//通过比较2次的updateFile生成需要更新的文件
-			foreach(KeyValuePair<string,UpdateFileInfo> kvp in _downloadUpdateFile.files)
+			foreach(KeyValuePair<string,VersionFileInfo> kvp in _versionFileOnServer.files)
 			{
-				UpdateFileInfo lastFileInfo = null;
-				_lastUpdateFile.files.TryGetValue(kvp.Key,out lastFileInfo);
+				VersionFileInfo lastFileInfo = null;
+				_lastVersionFile.files.TryGetValue(kvp.Key,out lastFileInfo);
 				if(lastFileInfo == null || lastFileInfo.md5 != kvp.Value.md5)
 				{
 					_allFileDic[kvp.Key] = kvp.Value;
 				}
 			}
 		}
-		foreach(KeyValuePair<string,UpdateFileInfo> kvp in _allFileDic)
+		foreach(KeyValuePair<string,VersionFileInfo> kvp in _allFileDic)
 		{
-			string downloadPath = string.Format("{0}/{1}",DownloadConfig.downLoadPath,kvp.Key);
-			if(File.Exists(downloadPath))
+			string filesDownloadPath = string.Format("{0}/{1}",DownloadConfig.downLoadPath,kvp.Key);
+			if(File.Exists(filesDownloadPath))
 			{
-				string md5 = VersionHelper.GetMd5Val(downloadPath);
+				string md5 = VersionHelper.GetMd5Val(filesDownloadPath);
 				if(!string.Equals(md5,kvp.Value.md5))
 				{
 					_needUpdateFileList.Add(kvp.Key);
-				}
+				}		
 			}
 			else
 			{
@@ -145,33 +164,47 @@ public class VersionMgr
 		}
 	}
 
-	void DownloadUpdateFiles(int index)
+	void DownloadUpdateFiles(int index,float delay = -1)
 	{
 		if(index >= _needUpdateFileList.Count)
 		{
 			//下载完所有更新文件之后，写入新的updateFile
-			WriteUpdateFileTxt();
+			_lastVersionFile = _versionFileOnServer;
+			WriteVersionFileToDisk();
 			return;
 		}
-		string version = _downloadUpdateFile.files[_needUpdateFileList[index]].version;
+		Debug.Log("Begin download update files "+_needUpdateFileList[index]);
+		string version = _versionFileOnServer.files[_needUpdateFileList[index]].version;
 		string downloadUrl = string.Format("{0}/{1}/{2}",_serverResult.downloadBaseUrl,version,_needUpdateFileList[index]);
-		DownloadMgr.instance.Download<byte[]>(downloadUrl,OnFileDownloadFinised);
+		DownloadMgr.instance.Download(downloadUrl,OnUpdateFileDownloadFinised);
 	}
 
-	void OnFileDownloadFinised(byte[] content)
+	void OnUpdateFileDownloadFinised(WWW www)
 	{
+		if(www == null)
+		{
+			//如果下载失败，等待1s后重新下载，可以是个逐渐增长的等待时间
+			DownloadUpdateFiles(_downloadIndex,1.0f);
+			return;
+		}
+		byte[] content = www.bytes;
 		string writePath = string.Format("{0}/{1}",DownloadConfig.downLoadPath,_needUpdateFileList[_downloadIndex]);
-		if(WriteFileToDisk(writePath,content))
+		if(WriteUpdateFileToDisk(writePath,content))
 		{
 			_downloadIndex += 1;
 			DownloadUpdateFiles(_downloadIndex);
 		}
 	}
 
-	bool WriteFileToDisk(string path,byte[] content)
+	bool WriteUpdateFileToDisk(string path,byte[] content)
 	{
 		try
 		{
+			string dir = path.Substring(0,path.LastIndexOf("/"));
+			if(!Directory.Exists(dir))
+			{
+				Directory.CreateDirectory(dir);
+			}
 			FileStream fs =new FileStream(path,FileMode.OpenOrCreate);
 			fs.Write(content,0,content.Length);
 			fs.Flush();
@@ -186,11 +219,19 @@ public class VersionMgr
 		return false;
 	}
 
-	void WriteUpdateFileTxt()
+	void WriteVersionFileToDisk()
 	{
-		string str = VersionHelper.ConvertUpdateFileToString(_downloadUpdateFile);
-		string updateFilePath = string.Format("{0}/{1}",DownloadConfig.downLoadPath,VersionConfig.updateFileName);
-		File.WriteAllText(updateFilePath,str,System.Text.Encoding.UTF8);	
+		string str = VersionHelper.ConvertVersionFileToString(_versionFileOnServer);
+		string versionFilePath = string.Format("{0}/{1}",DownloadConfig.downLoadPath,VersionConfig.VersionFileName);
+		File.WriteAllText(versionFilePath,str,System.Text.Encoding.UTF8);	
+	}
 
+	public bool CheckFileIsInVersionFile(string path)
+	{
+		if(_lastVersionFile != null && _lastVersionFile.files.ContainsKey(path))
+		{
+			return true;
+		}
+		return false;
 	}
 }

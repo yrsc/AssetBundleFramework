@@ -7,11 +7,11 @@ public class VersionConfig
 {
 	public static string app_version = "1.0";
 	public static string res_version = "170423.0";
-	public static string updateFileName = "UpdateFile.txt";
+	public static string VersionFileName = "VersionFile.txt";
 
 }
 
-public class UpdateFileInfo
+public class VersionFileInfo
 {
 	private string _md5;
 	public string md5
@@ -25,28 +25,28 @@ public class UpdateFileInfo
 		get{return _version;}
 	}
 
-	public UpdateFileInfo(string md5Val,string versionVal)
+	public VersionFileInfo(string md5Val,string versionVal)
 	{
 		_md5 = md5Val;
 		_version = versionVal;
 	}
 }
 
-public class UpdateFile
+public class VersionFileModel
 {
-	public Dictionary<string,UpdateFileInfo> files = new Dictionary<string, UpdateFileInfo>();
+	public Dictionary<string,VersionFileInfo> files = new Dictionary<string, VersionFileInfo>();
 	public string resVersion = "0.0";
 }
 
 public class VersionHelper
 {
-	public static void ParseUpdateFile(string txt,ref UpdateFile updateFile)
+	public static void ParseVersionFile(string txt,ref VersionFileModel versionFile)
 	{
 		string[] content = txt.Split('\n');
 		if(content != null)
 		{
-			if(updateFile == null)
-				updateFile = new UpdateFile();
+			if(versionFile == null)
+				versionFile = new VersionFileModel();
 			for(int i = 0; i < content.Length - 1; i++)
 			{
 				if(!string.IsNullOrEmpty(content[i]))
@@ -57,22 +57,22 @@ public class VersionHelper
 						Debug.LogError("Can not parse last update file with content " + content[i]);
 						return;
 					}
-					updateFile.files[kvp[0]] = new UpdateFileInfo(kvp[1],kvp[2]);
+					versionFile.files[kvp[0]] = new VersionFileInfo(kvp[1],kvp[2]);
 				}
 			}
-			updateFile.resVersion = content[content.Length - 1];
+			versionFile.resVersion = content[content.Length - 1];
 		}
 	}
 
-	public static string ConvertUpdateFileToString(UpdateFile updateFile)
+	public static string ConvertVersionFileToString(VersionFileModel versionFile)
 	{
 		StringBuilder sb = new StringBuilder();		
-		foreach(KeyValuePair<string,UpdateFileInfo> kvp in updateFile.files)
+		foreach(KeyValuePair<string,VersionFileInfo> kvp in versionFile.files)
 		{
 			string content = string.Format("{0},{1},{2}\n",kvp.Key,kvp.Value.md5,kvp.Value.version);
 			sb.Append(content);
 		}
-		sb.Append(updateFile.resVersion);
+		sb.Append(versionFile.resVersion);
 		return sb.ToString();
 	}
 
@@ -89,4 +89,5 @@ public class VersionHelper
 		}
 		return sb.ToString();
 	}
+		
 }

@@ -4,13 +4,13 @@ using System.IO;
 
 public class SimpleLoader
 {
-	public static string RES_ROOT_PATH = "Assets/";
+	static string RES_ROOT_PATH = Application.dataPath;
 	public static T Load<T>(string path) where T : Object
 	{
 		#if UNITY_EDITOR && !LOAD_ASSETBUNDLE_INEDITOR
-		path = RES_ROOT_PATH + path;
+		path = string.Format("{0}/{1}","Assets",path);
 		return UnityEditor.AssetDatabase.LoadAssetAtPath<T>(path);
-		#else				
+		#else		
 		return AssetbundleLoader.LoadRes<T>(path);
 		#endif
 	}
@@ -25,6 +25,19 @@ public class SimpleLoader
 
 	public static string LoadText(string path)
 	{
+		#if UNITY_EDITOR && !LOAD_ASSETBUNDLE_INEDITOR
+		path = string.Format("{0}/{1}",RES_ROOT_PATH,path);
+		#else		
+		if (VersionMgr.instance.CheckFileIsInVersionFile(path)) 
+		{
+			path = string.Format("{0}/{1}",AssetbundleLoader.Download_Path,path) ;
+		}
+		else 
+		{
+			path = string.Format("{0}/{1}",AssetbundleLoader.ROOT_PATH,path);
+		}
+		#endif
+
 		if(File.Exists(path))
 		{
 			return File.ReadAllText(path);

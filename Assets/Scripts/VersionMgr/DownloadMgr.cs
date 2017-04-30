@@ -21,32 +21,29 @@ public class DownloadMgr : MonoBehaviour {
 		instance = this;
 	}
 		
-	public void Download<T>(string url,Action<T> downloadFinishedCallback)
+	public void Download(string url,Action<WWW> downloadFinishedCallback,float delay = -1)
 	{
-		StartCoroutine(DownloadCoroutine<T>(url,downloadFinishedCallback));
+		StartCoroutine(DownloadCoroutine(url,downloadFinishedCallback,delay));
 	}
 
-	IEnumerator DownloadCoroutine<T>(string url,Action<T> downloadFinishedCallback)
+	IEnumerator DownloadCoroutine(string url,Action<WWW> downloadFinishedCallback,float delay)
 	{
+		if(delay > 0)
+			yield return new WaitForSeconds(delay);
 		WWW www = new WWW(url);
 		yield return www;
-		if(!string.IsNullOrEmpty(www.error) && www.isDone)
+		if(string.IsNullOrEmpty(www.error) && www.isDone)
 		{
 			if(downloadFinishedCallback != null)
 			{
-//				if(typeof(T) == typeof(string))
-//				{
-//					downloadFinishedCallback(www.text);
-//				}
-//				else if(typeof(T) == typeof(byte[]))
-//				{
-//					downloadFinishedCallback(www.bytes);
-//				}
-//				else
-//				{
-//					Debug.LogError("undefined type " + typeof(T));
-//				}
+				downloadFinishedCallback(www);
 			}
 		}
+		else
+		{
+			Debug.Log("Download failed "+www.error);
+			downloadFinishedCallback(null);
+		}
+		www.Dispose();
 	}
 }

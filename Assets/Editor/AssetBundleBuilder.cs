@@ -12,7 +12,7 @@ public class AssetNode
 
 public class AssetBundleBuilder : Editor 
 {	
-	public static string AssetBundle_Path = Application.dataPath + "/StreamingAssets/AssetBundle";
+	public static string AssetBundle_Path = Application.streamingAssetsPath;
 
 	//需要打包的资源路径（相对于Assets目录），通常是prefab,lua,及其他数据。（贴图，动画，模型，材质等可以通过依赖自己关联上，不需要添加在该路径里，除非是特殊需要）
 	//注意这里是目录，单独零散的文件，可以新建一个目录，都放在里面打包

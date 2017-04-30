@@ -8,29 +8,27 @@ using System.Collections.Generic;
 
 public class VersionBuilder : Editor 
 {
-	public static string AssetBundle_Path = Application.dataPath + "/StreamingAssets/AssetBundle";
-	public static string Root_Path = Application.dataPath + "/Examples";
-	public static string ABResource_Path = Root_Path+ "/ABResources";
-
-	private static string _versionMd5FilesPath = Application.dataPath + "/VersionFiles/";
-	private static string _versionMd5FileName = "AssetbudleMd5File.txt";
-	private static string _updateFileName = "";
+	public static string AssetsPath = Application.streamingAssetsPath;
+	private static string _versionFilesPath = Application.dataPath + "/VersionFiles/";
+	private static string _md5FileName = "Md5File.txt";
+	private static string _verionFileName = "";
 
 	static VersionBuilder()
 	{
 		#if UNITY_IOS
-			_versionMd5FilesPath += "iOS/";
+			_versionFilesPath += "iOS/";
 		#elif UNITY_ANDROID
 			_versionMd5FilesPath += "Android/";
 		#endif
-		_versionMd5FileName = _versionMd5FilesPath + _versionMd5FileName;
-		_updateFileName = _versionMd5FilesPath + VersionConfig.updateFileName;
+		_md5FileName = _versionFilesPath + _md5FileName;
+		_verionFileName = _versionFilesPath + VersionConfig.VersionFileName;
 	}
 
 	[MenuItem("Version/CleanBuildApp(we need a new app)")]
 	static void BuildGameApp()
 	{
 		CleanBuildAllBundle();
+		BuildText();
 		CleanAndWriteNewVersion();
 	}
 
@@ -38,15 +36,16 @@ public class VersionBuilder : Editor
 	static void FastBuildGameApp()
 	{
 		BuildAllBundle();
+		BuildText();
 		CleanAndWriteNewVersion();
 	}
 
 	static void CleanAndWriteNewVersion()
 	{
 		CleanVersionFiles();
-		if(GenerateAllBundleMd5Now())
+		if(GenerateAllFilesMd5Now())
 		{
-			WriteVersionMd5Files();
+			WriteMd5Files();
 		}
 		AssetDatabase.SaveAssets();
 		AssetDatabase.Refresh();
@@ -59,6 +58,7 @@ public class VersionBuilder : Editor
 		if(CheckCanBuildPatch())
 		{
 			CleanBuildAllBundle();
+			BuildText();
 			GenerateUpdateFiles();
 		}
 	}
@@ -70,23 +70,24 @@ public class VersionBuilder : Editor
 		if(CheckCanBuildPatch())
 		{
 			BuildAllBundle();
+			BuildText();
 			GenerateUpdateFiles();
 		}
 	}
 
 	static bool CheckCanBuildPatch()
 	{
-		if(!File.Exists(_versionMd5FileName))
+		if(!File.Exists(_md5FileName))
 		{
 			Debug.LogError("Can not find last version,you may execute \"CleanBuildApp\" first if you want to update assetbundles based on last version");
 			return false;
 		}
-		if(LoadLastUpdateFile() == null)
+		if(LoadVersionFileOnDisk() == null)
 		{
 			Debug.LogError("Load last update file failed!");
 			return false;
 		}
-		if(_updateFiles.resVersion == VersionConfig.res_version)
+		if(_versionFile.resVersion == VersionConfig.res_version)
 		{
 			Debug.LogError("You must change your res_verion in versionconfig if you want to publish a patch");
 			return false;
@@ -97,12 +98,12 @@ public class VersionBuilder : Editor
 
 	static void GenerateUpdateFiles()
 	{
-		if(!LoadLastVersionMd5())
+		if(!LoadMd5OnDisk())
 		{
 			Debug.LogError("Load last version md5 file failed!");
 			return;
 		}
-		if(!GenerateAllBundleMd5Now())
+		if(!GenerateAllFilesMd5Now())
 		{
 			Debug.LogError("Generate new version md5 file failed!");
 			return;
@@ -117,24 +118,24 @@ public class VersionBuilder : Editor
 		}
 		//set update files version
 		string newVersion = GetNewResVersion();
-		_updateFiles.resVersion = newVersion;
+		_versionFile.resVersion = newVersion;
 		for(int i = 0; i < needUpdateFileList.Count;i++)
 		{
-			_updateFiles.files[needUpdateFileList[i]] = new UpdateFileInfo(_allBundleMd5Now[needUpdateFileList[i]],newVersion);
+			_versionFile.files[needUpdateFileList[i]] = new VersionFileInfo(_allFilesMd5Now[needUpdateFileList[i]],newVersion);
 		}
 		//delete unused assetbundles
 		for(int i = 0; i < needDeleteFileList.Count; i++)
 		{
-			if(_updateFiles.files.ContainsKey(needDeleteFileList[i]))
+			if(_versionFile.files.ContainsKey(needDeleteFileList[i]))
 			{
-				_updateFiles.files.Remove(needDeleteFileList[i]);
+				_versionFile.files.Remove(needDeleteFileList[i]);
 			}
 		}
-		WriteUpdateFiles();
-		WriteVersionMd5Files();
+		WriteVersionFiles();
+		WriteMd5Files();
 
 		//export update assetbundles
-		ExportUpdateAssetbundle(needUpdateFileList);
+		ExportUpdateFiles(needUpdateFileList);
 
 		AssetDatabase.SaveAssets();
 		AssetDatabase.Refresh();
@@ -142,36 +143,36 @@ public class VersionBuilder : Editor
 
 	static void CleanVersionFiles()
 	{
-		if(Directory.Exists(_versionMd5FilesPath))
+		if(Directory.Exists(_versionFilesPath))
 		{
-			Directory.Delete(_versionMd5FilesPath,true);
+			Directory.Delete(_versionFilesPath,true);
 		}
 	}
 
-	static void WriteVersionMd5Files()
+	static void WriteMd5Files()
 	{
-		if(!Directory.Exists(_versionMd5FilesPath))
+		if(!Directory.Exists(_versionFilesPath))
 		{
-			Directory.CreateDirectory(_versionMd5FilesPath);
+			Directory.CreateDirectory(_versionFilesPath);
 		}
 		StringBuilder sb = new StringBuilder();
-		foreach(KeyValuePair<string,string> kvp in _allBundleMd5Now)
+		foreach(KeyValuePair<string,string> kvp in _allFilesMd5Now)
 		{
 			string content = kvp.Key + "," + kvp.Value + "\n";
 			sb.Append(content);
 		}
-		File.WriteAllText(_versionMd5FileName,sb.ToString(),System.Text.Encoding.UTF8);	
+		File.WriteAllText(_md5FileName,sb.ToString());	
 	}
 
 
-	private static Dictionary<string,string> _allBundleMd5LastVersion = new Dictionary<string, string>();
+	private static Dictionary<string,string> _allFilesMd5LastVersion = new Dictionary<string, string>();
 
-	static bool LoadLastVersionMd5()
+	static bool LoadMd5OnDisk()
 	{
 		try
 		{
-			_allBundleMd5LastVersion.Clear();
-			string[] content = File.ReadAllLines(_versionMd5FileName);
+			_allFilesMd5LastVersion.Clear();
+			string[] content = File.ReadAllLines(_md5FileName);
 			if(content != null)
 			{
 				for(int i = 0; i < content.Length; i++)
@@ -184,7 +185,7 @@ public class VersionBuilder : Editor
 							Debug.LogError("Can not parse last md5 file with content " + content[i]);
 							return false;
 						}
-						_allBundleMd5LastVersion[kvp[0]] = kvp[1];
+						_allFilesMd5LastVersion[kvp[0]] = kvp[1];
 					}
 				}
 			}
@@ -197,16 +198,16 @@ public class VersionBuilder : Editor
 		return true;
 	}
 
-	private static Dictionary<string,string> _allBundleMd5Now = new Dictionary<string, string>();
-	static bool GenerateAllBundleMd5Now()
+	private static Dictionary<string,string> _allFilesMd5Now = new Dictionary<string, string>();
+	static bool GenerateAllFilesMd5Now()
 	{
-		_allBundleMd5Now.Clear();
-		if(!Directory.Exists(AssetBundle_Path))
+		_allFilesMd5Now.Clear();
+		if(!Directory.Exists(AssetsPath))
 		{
-			Debug.LogError(string.Format("assetbundle path {0} not exist",AssetBundle_Path));
+			Debug.LogError(string.Format("AssetsPath path {0} not exist",AssetsPath));
 			return false;
 		}
-		DirectoryInfo dir = new DirectoryInfo(AssetBundle_Path);
+		DirectoryInfo dir = new DirectoryInfo(AssetsPath);
 		var files = dir.GetFiles("*", SearchOption.AllDirectories);
 		for (var i = 0; i < files.Length; ++i)
 		{
@@ -215,8 +216,8 @@ public class VersionBuilder : Editor
 				if(files[i].Name.EndsWith(".meta") || files[i].Name.EndsWith(".manifest") )
 					continue;
 				string md5 = VersionHelper.GetMd5Val(files[i].FullName);
-				string fileRelativePath = files[i].FullName.Substring(AssetBundle_Path.Length+1);
-				_allBundleMd5Now[fileRelativePath] = md5;
+				string fileRelativePath = files[i].FullName.Substring(AssetsPath.Length+1);
+				_allFilesMd5Now[fileRelativePath] = md5;
 			}
 			catch (Exception ex)
 			{
@@ -227,15 +228,14 @@ public class VersionBuilder : Editor
 		return true;
 	}
 
-	private static UpdateFile _updateFiles = new UpdateFile();
 	static List<string> GenerateDifferentFilesList()
 	{ 
 		List<string> _needUpdateFileList = new List<string>();
-		foreach(KeyValuePair<string,string> kvp in _allBundleMd5Now)
+		foreach(KeyValuePair<string,string> kvp in _allFilesMd5Now)
 		{
-			if(_allBundleMd5LastVersion.ContainsKey(kvp.Key))
+			if(_allFilesMd5LastVersion.ContainsKey(kvp.Key))
 			{
-				if(_allBundleMd5LastVersion[kvp.Key] == kvp.Value)
+				if(_allFilesMd5LastVersion[kvp.Key] == kvp.Value)
 				{
 					continue;
 				}
@@ -255,9 +255,9 @@ public class VersionBuilder : Editor
 	static List<string> GenerateNeedDeleteFilesList()
 	{ 
 		List<string> _needDeleteFileList = new List<string>();
-		foreach(KeyValuePair<string,string> kvp in _allBundleMd5LastVersion)
+		foreach(KeyValuePair<string,string> kvp in _allFilesMd5LastVersion)
 		{
-			if(_allBundleMd5Now.ContainsKey(kvp.Key))
+			if(_allFilesMd5Now.ContainsKey(kvp.Key))
 			{
 				continue;
 			}
@@ -269,15 +269,16 @@ public class VersionBuilder : Editor
 		return _needDeleteFileList;
 	}
 
-	static UpdateFile LoadLastUpdateFile()
+	private static VersionFileModel _versionFile = new VersionFileModel();
+	static VersionFileModel LoadVersionFileOnDisk()
 	{
-		_updateFiles = new UpdateFile();
-		if(File.Exists(_updateFileName))
+		_versionFile = new VersionFileModel();
+		if(File.Exists(_verionFileName))
 		{
 			try
 			{		
-				string content = File.ReadAllText(_updateFileName);
-				VersionHelper.ParseUpdateFile(content,ref _updateFiles);
+				string content = File.ReadAllText(_verionFileName);
+				VersionHelper.ParseVersionFile(content,ref _versionFile);
 			}
 			catch (Exception ex)
 			{
@@ -285,7 +286,7 @@ public class VersionBuilder : Editor
 				return null;
 			}
 		}
-		return _updateFiles;
+		return _versionFile;
 	}
 
 	static string GetNewResVersion()
@@ -294,21 +295,21 @@ public class VersionBuilder : Editor
 	}
 		
 	private static string _exportPath = "";
-	static void ExportUpdateAssetbundle(List<string> updatedAssetbundles)
+	static void ExportUpdateFiles(List<string> updatedFiles)
 	{		
-		if(updatedAssetbundles.Count > 0)
+		if(updatedFiles.Count > 0)
 		{
-			_exportPath = Application.dataPath.Substring(0,Application.dataPath.LastIndexOf("/")+1) + "NewAssetbundles";
+			_exportPath = Application.dataPath.Substring(0,Application.dataPath.LastIndexOf("/")+1) + "UpdateFiles";
 			#if UNITY_IOS
 			_exportPath += "/iOS";
 			#elif UNITY_ANDROID
 			_exportPath += "/Android";
 			#endif
 			_exportPath = string.Format("{0}/{1}/{2}",_exportPath,VersionConfig.app_version,GetNewResVersion());
-			for(int i = 0; i < updatedAssetbundles.Count;i++)
+			for(int i = 0; i < updatedFiles.Count;i++)
 			{
-				string assetbundleDestPath = _exportPath + "/" + updatedAssetbundles[i];
-				string assetbundleSrcPath = AssetBundle_Path + "/" + updatedAssetbundles[i];
+				string assetbundleDestPath = _exportPath + "/" + updatedFiles[i];
+				string assetbundleSrcPath = AssetsPath + "/" + updatedFiles[i];
 				string destDir = Path.GetDirectoryName(assetbundleDestPath);
 				if(!Directory.Exists(destDir))
 				{
@@ -317,28 +318,28 @@ public class VersionBuilder : Editor
 				File.Copy(assetbundleSrcPath,assetbundleDestPath,true);
 			}
 		}
-		string updateFileSrcPath = _updateFileName;
-		string updateFileDestPath = _exportPath + "/" +Path.GetFileName(updateFileSrcPath);
-		string updateFileDestDir = Path.GetDirectoryName(updateFileDestPath);
+		string versionFileSrcPath = _verionFileName;
+		string versionFileDestPath = _exportPath + "/" +Path.GetFileName(versionFileSrcPath);
+		string updateFileDestDir = Path.GetDirectoryName(versionFileDestPath);
 		if(!Directory.Exists(updateFileDestDir))
 		{
 			Directory.CreateDirectory(updateFileDestDir);
 		}
-		File.Copy(updateFileSrcPath,updateFileDestPath,true);
+		File.Copy(versionFileSrcPath,versionFileDestPath,true);
 	}
 
-	static void WriteUpdateFiles()
+	static void WriteVersionFiles()
 	{			
-		string str = VersionHelper.ConvertUpdateFileToString(_updateFiles);
-		File.WriteAllText(_updateFileName,str,System.Text.Encoding.UTF8);	
+		string str = VersionHelper.ConvertVersionFileToString(_versionFile);
+		File.WriteAllText(_verionFileName,str);	
 
 	}
 
 	static void CleanBuildAllBundle()
 	{
-		if(Directory.Exists(AssetBundle_Path))
+		if(Directory.Exists(AssetsPath))
 		{
-			Directory.Delete(AssetBundle_Path,true);
+			Directory.Delete(AssetsPath,true);
 		}
 		BuildAllBundle();
 	}
@@ -348,5 +349,8 @@ public class VersionBuilder : Editor
 		AssetBundleBuilder.BuildAssetBundle();
 	}
 
-
+	static void BuildText()
+	{
+		TextBuilder.BuildText();
+	}
 }

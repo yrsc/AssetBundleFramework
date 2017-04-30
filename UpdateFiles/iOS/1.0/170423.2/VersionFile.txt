@@ -1,0 +1,4 @@
+StreamingAssets,ccd211297ac3bd79c73034229b169d9f,170423.1
+StaticData/Test.txt,3f0df51e0d2bcc658d10e98c692b4b60,170423.2
+prefabs/book_01.prefab,40afc046ce7e7a53529c36151b76f00f,170423.1
+170423.2
