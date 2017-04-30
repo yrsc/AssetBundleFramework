@@ -78,7 +78,7 @@ public class VersionMgr
 		VersionResultFromServer result = new VersionResultFromServer();
 		//result.downloadBaseUrl = "file:///Users/yr/GamePatch";
 		result.downloadBaseUrl = "http://192.168.10.180:9001";
-		//测试的改为VersionType.Res,代表资源更新
+		//测试的时候改为VersionType.Res,代表资源更新
 		result.versionType = VersionType.None;
 		result.serverResVersion = "170423.2";
 		//服务器传回来的下载地址假设是xx.xx.xxx.xx,我们需要根据平台重新生成一下，最终为xx.xx.xxx.xx/iOS 或者xx.xx.xxx.xx/Android
