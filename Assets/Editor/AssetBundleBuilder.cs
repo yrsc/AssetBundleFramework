@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEditor;
 using System.IO;
 
+namespace AssetBundleFramework
+{
 public class AssetNode
 {
 	public List<AssetNode> parents = new List<AssetNode>();
@@ -91,9 +93,16 @@ public class AssetBundleBuilder : Editor
 						continue;	
 					//获得在文件相对于Assets下的目录，类似于Assets/Prefab/UI/xx.prefab
 					string fileRelativePath = GetReleativeToAssets(files[j].FullName);
-					AssetNode root = new AssetNode();
-					root.path = fileRelativePath;
-					GetDependcyRecursive(fileRelativePath,root);
+					AssetNode root = null;
+					//文件可能在上一个文件的依赖关系中被处理了
+					_allAssetNodes.TryGetValue(fileRelativePath,out root);
+					if(root == null)
+					{
+						root = new AssetNode();
+						root.path = fileRelativePath;
+						_allAssetNodes[root.path] = root;
+						GetDependcyRecursive(fileRelativePath,root);
+					}
 				}	
 			}
 		}
@@ -118,11 +127,16 @@ public class AssetBundleBuilder : Editor
 			}
 			else
 			{
+				if(!node.parents.Contains(parentNode))
+				{
+					node.parents.Add(parentNode);
+				}
 				if(node.depth < parentNode.depth + 1)
 				{
 					node.depth = parentNode.depth + 1;
+					GetDependcyRecursive(dependcy[i],node);
 				}
-				node.parents.Add(parentNode);
+				
 			}
 			//Debug.Log("dependcy path is " +dependcy[i] + " parent is " + parentNode.path);
 		}
@@ -219,5 +233,6 @@ public class AssetBundleBuilder : Editor
 		if(fileName.EndsWith(".meta") || fileName.EndsWith(".DS_Store") || fileName.EndsWith(".cs"))
 			return true;
 		return false;
+	}
 	}
 }

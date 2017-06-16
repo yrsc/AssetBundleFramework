@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using UnityEditor;
 using System.IO;
-
+namespace AssetBundleFramework
+{ 
 public class TextBuilder : Editor  
 {
 	//存放文本文件的文件夹
@@ -55,4 +56,5 @@ public class TextBuilder : Editor
 			return true;
 		return false;
 	}
+}
 }

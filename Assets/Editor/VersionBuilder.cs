@@ -6,6 +6,8 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 
+namespace AssetBundleFramework
+{
 public class VersionBuilder : Editor 
 {
 	public static string AssetsPath = Application.streamingAssetsPath;
@@ -18,7 +20,7 @@ public class VersionBuilder : Editor
 		#if UNITY_IOS
 			_versionFilesPath += "iOS/";
 		#elif UNITY_ANDROID
-			_versionMd5FilesPath += "Android/";
+			_versionFilesPath += "Android/";
 		#endif
 		_md5FileName = _versionFilesPath + _md5FileName;
 		_verionFileName = _versionFilesPath + VersionConfig.VersionFileName;
@@ -353,4 +355,5 @@ public class VersionBuilder : Editor
 	{
 		TextBuilder.BuildText();
 	}
+}
 }
