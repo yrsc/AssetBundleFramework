@@ -2,6 +2,8 @@
 using System.Collections;
 using UnityEngine.SceneManagement;
 
+namespace AssetBundleFramework
+{
 public class AssetbundleLoadTest : MonoBehaviour {
 
 	private string _assetbundlePath = "";
@@ -45,4 +47,5 @@ public class AssetbundleLoadTest : MonoBehaviour {
 		_prefabName = GUI.TextField(new Rect(Screen.width-200,10,200,200),_prefabName);
 
 	}
+}
 }

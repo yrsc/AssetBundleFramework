@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System;
 
+namespace AssetBundleFramework
+{
 public enum VersionType
 {
 	App,
@@ -234,4 +236,5 @@ public class VersionMgr
 		}
 		return false;
 	}
+}
 }

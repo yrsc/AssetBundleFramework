@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 
+namespace AssetBundleFramework
+{
 public class AssetbundleLoader
 {
 	public static string ROOT_PATH = "";
@@ -96,3 +98,4 @@ public class AssetbundleLoader
 		Debug.Log ("Load Manifest Finished");
 	}
 }
+			}

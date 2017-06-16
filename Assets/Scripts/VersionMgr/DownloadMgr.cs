@@ -2,6 +2,8 @@
 using System.Collections;
 using System;
 
+namespace AssetBundleFramework
+{
 public static class DownloadConfig
 {
 	public static string downLoadPath = "";
@@ -46,4 +48,5 @@ public class DownloadMgr : MonoBehaviour {
 		}
 		www.Dispose();
 	}
+}
 }

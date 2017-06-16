@@ -1,7 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.IO;
-
+namespace AssetBundleFramework
+{
 public class SimpleLoader
 {
 	static string RES_ROOT_PATH = Application.dataPath;
@@ -48,4 +49,4 @@ public class SimpleLoader
 			return null;
 		}
 	}
-}
+	}}

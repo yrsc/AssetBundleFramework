@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
+namespace AssetBundleFramework
+{
 public class VersionConfig
 {
 	public static string app_version = "1.0";
@@ -90,4 +92,5 @@ public class VersionHelper
 		return sb.ToString();
 	}
 		
+}
 }

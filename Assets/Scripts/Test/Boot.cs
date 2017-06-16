@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+namespace AssetBundleFramework	
+{
 public class Boot : MonoBehaviour {
 
 	// Use this for initialization
@@ -13,4 +15,5 @@ public class Boot : MonoBehaviour {
 	void Update () {
 	
 	}
+}
 }

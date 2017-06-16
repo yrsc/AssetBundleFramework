@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using UnityEngine.SceneManagement;
 
+namespace AssetBundleFramework
+{
 public class LevelLoadMgr
 {
 	public static void LoadLevelSync(string scene)
@@ -12,4 +14,5 @@ public class LevelLoadMgr
 	{
 		return SceneManager.LoadSceneAsync(scene);
 	}
+}
 }
