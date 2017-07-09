@@ -225,6 +225,8 @@ public class AssetBundleBuilder : Editor
 	{
 		//获得在文件在Assets下的目录，类似于Assets/path/of/yourfile
 		string fileRelativePath = fullName.Substring(Application.dataPath.Length-6);
+		//如果在windows平台下运行，需要替换路径中的\为/;
+		fileRelativePath = 	fileRelativePath.Replace("\\","/");
 		return fileRelativePath;
 	}
 
